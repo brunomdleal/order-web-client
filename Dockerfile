@@ -1,5 +1,5 @@
 # Stage 1: Build static bundle
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 
 # Copies dependency manifests (package.json and package-lock.json) into the workdir
@@ -23,10 +23,14 @@ RUN rm -rf /usr/share/nginx/html/*
 # Artifact Extraction - Copies the compiled assets from the builder stage directly into Nginx's root web directory.
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Grant the nginx user write permissions for cache and pid paths
+RUN touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /usr/share/nginx/html
+
 # Run as non-root nginx user (least privilege)
 USER nginx
 
-EXPOSE 80
+EXPOSE 8080
 
 # Container Entrypoint Command - Launches Nginx in the foreground (daemon off;)
 CMD ["nginx", "-g", "daemon off;"]
