@@ -17,7 +17,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ onSubmit, loading }) => {
     const [status, setStatus] = useState<OrderStatus>("PENDING");
 
     // Intercepts native DOM form submit events.
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.SubmitEvent) => {
         // Validates that the item string is not blank/whitespace and quantity is at least 1.
         e.preventDefault();
         if (!item.trim() || quantity <= 0) {
