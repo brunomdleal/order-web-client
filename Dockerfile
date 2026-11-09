@@ -1,5 +1,12 @@
 # Stage 1: Build static bundle
 FROM node:20-slim AS builder
+
+# Upgrade OS packages to pull upstream security patches (e.g. libexpat >= 2.10.0-r0)
+RUN apt-get update && apt-get upgrade -y
+# Deletes OS update temp files
+RUN rm -rf /var/lib/apt/lists/*
+
+### MOVE TO THE FOLDER "/app" ###
 WORKDIR /app
 
 # Copies dependency manifests (package.json and package-lock.json) into the workdir
@@ -14,6 +21,9 @@ RUN npm run build
 
 # Stage 2: Minimal unprivileged Nginx runner
 FROM nginx:1.27-alpine-slim AS runner
+
+# Upgrade OS packages to pull upstream security patches (e.g. libexpat >= 2.10.0-r0)
+RUN apk update && apk upgrade --no-cache
 
 # Configuration Override - Overwrites Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
