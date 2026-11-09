@@ -1,0 +1,68 @@
+name: delivery-pipeline.yml
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+env:
+  VERSION_PREFIX: 0.0.
+  ACTOR: ${{ github.actor }}
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    name: Build and verify
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Clone project
+        id: clone_project
+        uses: actions/checkout@v7
+      - name: Configure Node
+        id: node
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        id: npm_ci
+        run: npm ci
+      - name: Run TypeScript type-check and Vite build
+        id: npm_build
+        run: npm run build
+      - name: Build docker images
+        id: build_docker_images
+        run: >
+          docker build
+          -t order-web-client:${{ env.VERSION_PREFIX }}${{ github.run_number }}
+          -t ghcr.io/${ACTOR,,}/order-web-client:${{ env.VERSION_PREFIX }}${{ github.run_number }}
+          -t ghcr.io/${ACTOR,,}/order-web-client:latest
+          .
+      - name: Integrate Aqua Security Trivy Scan
+        id: trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'image'
+          image-ref: 'order-web-client:${{ env.VERSION_PREFIX }}${{ github.run_number }}'
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+      - name: Login into the Github Container Registry
+        id: github_container_registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push image to GHCR
+        id: push_to_github_container_registry
+        if: github.ref_name == 'master'
+        run: |
+          docker push ghcr.io/${ACTOR,,}/order-web-client:${{ env.VERSION_PREFIX }}${{ github.run_number }}
+          docker push ghcr.io/${ACTOR,,}/order-web-client:latest
