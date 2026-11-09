@@ -2,7 +2,9 @@
 FROM node:20-slim AS builder
 
 # Upgrade OS packages to pull upstream security patches (e.g. libexpat >= 2.10.0-r0)
-RUN apk update && apk upgrade --no-cache
+RUN apt-get update && apt-get upgrade -y
+# Deletes OS update temp files
+RUN rm -rf /var/lib/apt/lists/*
 
 ### MOVE TO THE FOLDER "/app" ###
 WORKDIR /app
